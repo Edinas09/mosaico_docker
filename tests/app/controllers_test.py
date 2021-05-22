@@ -1,5 +1,7 @@
 from flask import url_for
 from app import app as flask_app
+from app import cache
+from app.controllers import create_md5
 import pytest
 
 @pytest.fixture
@@ -63,4 +65,12 @@ def test_posts_success_direction_desc(client):
     json = response.get_json()["posts"]
     assert json[-1]["id"] == 1
     assert json[0]["id"] == 99
+
+def test_posts_success_cache(client):
+    url = url_for("posts", tags='tech', sortBy='id', direction='desc')
+    response = client.get(url)
+    md5 = create_md5('tech', 'id', 'desc')
+    assert response.status_code == 200
+    json = response.get_json()
+    assert json == cache.get(md5)
 

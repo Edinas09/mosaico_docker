@@ -1,11 +1,18 @@
-from app import app
+from app import app, cache
 from flask import jsonify, request
 import requests
+import hashlib
+
 
 
 @app.route("/api/ping")
 def ping():
     return jsonify({"success": True})
+
+def create_md5(tags, sortBy, direction):
+    parameters = f"tags={tags}sortBy={sortBy}direction{direction}"
+    md5 = hashlib.md5(parameters.encode()).hexdigest()
+    return md5
 
 
 @app.route("/api/posts")
@@ -30,6 +37,12 @@ def posts():
     ls_tags = tags.split(",")
     posts_dict = {}
 
+    md5 = create_md5(tags, sortBy, direction)
+
+    result = cache.get(md5)
+    if result:
+        return result
+
     for tags in ls_tags:
         result = requests.get(
             f"https://api.hatchways.io/assessment/blog/posts?tag={tags}&sortBy={sortBy}&direction={direction}"
@@ -49,4 +62,7 @@ def posts():
         key=lambda j: j[sortBy],
         reverse=True if direction == "desc" else False,
     )
-    return {"posts": sort_by}
+    result = {"posts": sort_by}
+    cache.set(md5, result)
+
+    return result
